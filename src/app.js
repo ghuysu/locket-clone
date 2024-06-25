@@ -4,6 +4,7 @@ const helmet = require("helmet")
 const morgan = require("morgan")
 const chokidar = require("chokidar")
 const path = require("path")
+const accessRoute = require("./routes/access.route")
 require("dotenv").config()
 require("./dbs/mongoose.db")
 
@@ -20,6 +21,8 @@ app.use(express.json())
 app.use(express.urlencoded({
     extended: true
 }))
+
+app.use("/access", accessRoute)
 
 app.use((req, res, next) => {
     const error = new Error("Not found")
