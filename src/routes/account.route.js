@@ -13,7 +13,7 @@ router.patch("/name", [
     .not().isEmpty().withMessage("Lastname is required")
     .trim(),
 
-    body("first")
+    body("firstname")
     .not().isEmpty().withMessage("Firstname is required")
     .trim()
     ], asyncHandler(AccountController.updateName))

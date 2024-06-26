@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk')
 const fs = require("fs");
+const {InternalServerError} = require("../core/error.response")
 require("dotenv").config()
 
 
@@ -11,12 +12,15 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-const uploadImageToAWSS3 = async (imagePath) => {
+const uploadImageToAWSS3 = async (imagePath, type='default') => {
     //load imagebuffer from imagePath
     const imageBuffer = await fs.promises.readFile(imagePath);
     //get imageName from path
     let imageName = imagePath.split('/')
     imageName = imageName[imageName.length-1]
+    if (type == 'default'){
+      imageName = `${type}_${imageName}`
+    }
     const params = {
         Bucket: process.env.BUCKET_NAME,
         Key: imageName,
@@ -32,35 +36,23 @@ const uploadImageToAWSS3 = async (imagePath) => {
     }
 };
 
-const deleteImage = async (imageName) => {
-  imageName = decodeURIComponent(imageName.replace(/%/g, ":"))
-  console.log(imageName)
-  
-  const params = {
-    Bucket: process.env.BUCKET_NAME,
-    Key: imageName
-  }
-  try {  
-    await s3.headObject(params).promise()
-    console.log("File Found in S3")
-  try {
-    await s3.deleteObject(params).promise()
-    console.log("file deleted Successfully")
-  }
-  catch (err) {
-    err.statusCode = 500
-    console.log("ERROR in file Deleting : " + JSON.stringify(err))
-    throw err
-  }
-  } catch (err) {
-    err.statusCode = 500
-    console.log("File not Found ERROR : " + err.code)
-    throw err
-  }
-
+const deleteImageInAWSS3 = async (imageName) => {
+    const params = {
+        Bucket: process.env.BUCKET_NAME,
+        Key: imageName
+    };
+    try {
+        await s3.deleteObject(params).promise();
+    } catch (err) {
+        if (err.code === 'NoSuchKey') {
+            throw new InternalServerError("Image not found from S3")
+        } else {
+          throw new InternalServerError('Error deleting file from S3');
+      }
+    }
 };
 
 module.exports = {
   uploadImageToAWSS3,
-  deleteImage
+  deleteImageInAWSS3
 }

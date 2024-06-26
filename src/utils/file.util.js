@@ -35,8 +35,13 @@ const deleteFile = async (filePath) => {
     }
 }
 
+const getImageNameFromUrl = async (url) => {
+    return url.split("/").pop()
+}
+
 
 module.exports = {
     createImageFromFullname,
-    deleteFile
+    deleteFile,
+    getImageNameFromUrl
 }
