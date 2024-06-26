@@ -53,4 +53,6 @@ router.post("/sign-up",
 
 router.use(asyncHandler(authenticateToken))
 
+router.post("/sign-out", asyncHandler(AccessController.signout))
+
 module.exports = router

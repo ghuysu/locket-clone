@@ -5,6 +5,13 @@ const {OK, CREATED} = require("../core/succes.response")
 const {validationResult} = require("express-validator")
 
 class AccessController {
+    static signout = async (req, res, next) => {
+        new OK({
+            message: "Sign out successfully",
+            metadata: await AccessService.signout(req.user)
+        }).send(res)
+    }
+
     static signin = async (req, res, next) => {
         new OK({
             message: "Sign in successfully",

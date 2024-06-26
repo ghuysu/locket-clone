@@ -11,6 +11,10 @@ const jwt = require("jsonwebtoken")
 require("dotenv").config()
 
 class AccessService {
+    static signout = async ({userId}) => {
+        await SignInKey.deleteOne({userId: userId})
+        return null;
+    }
 
     static signin = async (errors, {email, password}) => {
         if(!errors.isEmpty())
