@@ -11,6 +11,13 @@ class AccessController {
             metadata: await AccessService.confirmValidEmail(validationResult(req), req.body)
         }).send(res)
     }
+
+    static signup = async (req, res, next) => {
+        new CREATED({
+            message: "Created user successfully",
+            metadata: await AccessService.signup(validationResult(req), req.body)
+        }).send(res)
+    }
 }
 
 module.exports = AccessController
