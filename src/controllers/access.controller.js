@@ -5,6 +5,13 @@ const {OK, CREATED} = require("../core/succes.response")
 const {validationResult} = require("express-validator")
 
 class AccessController {
+    static signin = async (req, res, next) => {
+        new OK({
+            message: "Sign in successfully",
+            metadata: await AccessService.signin(validationResult(req), req.body)
+        }).send(res)
+    }
+
     static confirmValidEmail = async (req, res, next) => {
         new OK({
             message: "Sent code successfully",
