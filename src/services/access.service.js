@@ -8,9 +8,27 @@ const bcrypt = require("bcryptjs")
 const {createImageFromFullname, deleteFile} = require("../utils/file.util")
 const {uploadImageToAWSS3} = require("../utils/awsS3.util")
 const jwt = require("jsonwebtoken")
+const {validatePassword} = require("../utils/password.util")
 require("dotenv").config()
 
-class AccessService {
+class AccessService {  
+    static changePassword = async (errors, {email, password}) => {
+        if(!errors.isEmpty()){
+            throw new BadRequestError("Email and password are required")
+        }
+        if(!validatePassword(password)){
+            throw new BadRequestError("New password does not meet requirements")
+        }
+        const user = await User.findOne({email: email})
+        if (!user) {
+            throw new BadRequestError("User not found");
+        }    
+        const hashedPassword = await bcrypt.hash(password, 10)
+        user.password = hashedPassword
+        await user.save()
+        return user
+    }
+
     static signout = async ({userId}) => {
         await SignInKey.deleteOne({userId: userId})
         return null;
@@ -58,6 +76,9 @@ class AccessService {
         {
             console.log(errors.array())
             throw new BadRequestError("Data is invalid")
+        }
+        if(!validatePassword(password)){
+            throw new BadRequestError("New password does not meet requirements")
         }
         //hash password
         const hashedPassword = await bcrypt.hash(password, 10)

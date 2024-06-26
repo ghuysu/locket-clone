@@ -5,6 +5,13 @@ const {OK, CREATED} = require("../core/succes.response")
 const {validationResult} = require("express-validator")
 
 class AccessController {
+    static changePassword = async (req, res, next) => {
+        new OK({
+            message: "Change password successfully",
+            metadata: await AccessService.changePassword(validationResult(req), req.body)
+        }).send(res)
+    }
+
     static signout = async (req, res, next) => {
         new OK({
             message: "Sign out successfully",

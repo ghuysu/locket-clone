@@ -6,6 +6,8 @@ const chokidar = require("chokidar")
 const path = require("path")
 const accessRoute = require("./routes/access.route")
 const accountRoute = require("./routes/account.route")
+const {checkApiKey} = require("./auth/apikey.auth")
+const asyncHandler = require("./helpers/asyncHandler.helper")
 require("dotenv").config()
 require("./dbs/mongoose.db")
 
@@ -23,6 +25,7 @@ app.use(express.urlencoded({
     extended: true
 }))
 
+app.use(asyncHandler(checkApiKey))
 app.use("/access", accessRoute)
 app.use("/account", accountRoute)
 

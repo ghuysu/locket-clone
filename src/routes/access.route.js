@@ -4,10 +4,17 @@ const AccessController = require("../controllers/access.controller")
 const router = require("express").Router()
 const asyncHandler = require("../helpers/asyncHandler.helper")
 const {body} = require("express-validator")
-const {checkApiKey} = require("../auth/apikey.auth")
 const {authenticateToken} = require("../auth/loginKey.auth")
 
-router.use(asyncHandler(checkApiKey))
+router.patch("/password", [
+        body("email")
+        .isEmail().withMessage("Email is invalid")
+        .trim(),
+
+        body("password")
+        .not().isEmpty().withMessage("Password is required")
+        .trim()
+    ], asyncHandler(AccessController.changePassword))
 
 router.post("/sign-in", 
     [
