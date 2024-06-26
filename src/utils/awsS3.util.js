@@ -47,6 +47,7 @@ const deleteImageInAWSS3 = async (imageName) => {
         if (err.code === 'NoSuchKey') {
             throw new InternalServerError("Image not found from S3")
         } else {
+            console.error(err)
           throw new InternalServerError('Error deleting file from S3');
       }
     }

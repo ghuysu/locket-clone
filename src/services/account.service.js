@@ -52,11 +52,24 @@ class AccountService {
         return user
     }
 
-    static updateProfileImage({}) {
-        //check req.file is existing or not
+    static async updateProfileImage({userId}, image) {
+        //check image is existing or not
+        if(!image) {
+            throw new BadRequestError("No image found")
+        }
+        //get user
+        const user = await User.findById(userId)
+        console.log(image)
         //delete current image
+        await deleteImageInAWSS3(await getImageNameFromUrl(user.profileImageUrl))
         //update new image
+        const imageUrl = await uploadImageToAWSS3(image.path, null)
+        //delete image saved by multer
+        deleteFile(image.path)
         //update url
+        user.profileImageUrl = imageUrl
+        await user.save()
+        return user
     }
 
     static deleteAccount({}) {

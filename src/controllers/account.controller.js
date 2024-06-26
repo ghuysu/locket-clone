@@ -5,6 +5,13 @@ const {OK} = require("../core/succes.response")
 const {validationResult} = require("express-validator")
 
 class AccountController {
+    static async updateProfileImage(req, res, next) {
+        new OK({
+            message: "Change profile image successfully",
+            metadata: await AccountService.updateProfileImage(req.user, req.file)
+        }).send(res)
+    }
+
     static async updateName(req, res, next) {
         new OK({
             message: "Change name successfully",

@@ -5,6 +5,7 @@ const router = require("express").Router()
 const {body} = require("express-validator")
 const asyncHandler = require("../helpers/asyncHandler.helper")
 const {authenticateToken} = require("../auth/loginKey.auth")
+const {uploadImage} = require("../configs/multer.config")
 
 router.use(asyncHandler(authenticateToken))
 
@@ -30,5 +31,7 @@ router.patch("/email", [
     .isEmail().withMessage("Email is invalid")
     .normalizeEmail()
     ], asyncHandler(AccountController.updateEmail))
+
+router.patch("/profile-image", uploadImage.single('image'), asyncHandler(AccountController.updateProfileImage))
 
 module.exports = router
