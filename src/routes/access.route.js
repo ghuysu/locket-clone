@@ -51,5 +51,6 @@ router.post("/sign-up",
         .trim()
     ], asyncHandler(AccessController.signup))
 
+router.use(asyncHandler(authenticateToken))
 
 module.exports = router
