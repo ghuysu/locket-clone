@@ -5,6 +5,13 @@ const {OK} = require("../core/succes.response")
 const {validationResult} = require("express-validator")
 
 class AccountController {
+    static async removeFriend(req, res, next) {
+        new OK({
+            message: "Remove friend successfully",
+            metadata: await AccountService.removeFriend(validationResult(req), req.user, req.body)
+        }).send(res)
+    }
+
     static async addFriend(req, res, next) {
         new OK({
             message: "Add friend successfully",

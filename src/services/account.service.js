@@ -6,6 +6,30 @@ const {getImageNameFromUrl, createImageFromFullname, deleteFile} = require("../u
 const {uploadImageToAWSS3, deleteImageInAWSS3} = require("../utils/awsS3.util")
 
 class AccountService {
+    static async removeFriend(errors, {userId}, {friendId}) {
+        if (!errors.isEmpty()) {
+            console.log(errors.array())
+            throw new BadRequestError("Friend id is required")
+        }
+        //check friend is existing
+        const friend = await User.findById(friendId).lean()
+        if(!friend) {
+            throw new BadRequestError("Friend is not existing")
+        }
+        //check they are friends or not
+        const user = await User.findById(userId)
+        if (!user) {
+            throw new InternalServerError("Something wrong, try later");
+        } 
+        if (!user.friendList.some(f => f.id.toString() === friendId)){
+            throw new BadRequestError("They are not friends")
+        }
+        //update friendList
+        user.friendList = user.friendList.filter(f => f.id.toString() !== friendId)
+        await user.save()
+        return user
+    }
+    
     static async addFriend(errors, {userId}, {friendId}) {
         if (!errors.isEmpty()) {
             console.log(errors.array())
@@ -36,10 +60,6 @@ class AccountService {
         await user.save()
         //return
         return user
-    }
-
-    static async removeFriend(errors, {userId}, {friendId}) {
-
     }
 
     static async updateName(errors, {userId}, {lastname, firstname}) {
