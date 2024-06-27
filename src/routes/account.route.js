@@ -9,6 +9,12 @@ const {uploadImage} = require("../configs/multer.config")
 
 router.use(asyncHandler(authenticateToken))
 
+router.post("/friend/add", [
+    body("friendId")
+    .not().isEmpty().withMessage("Friend id is required")
+    .trim()
+], asyncHandler(AccountController.addFriend))
+
 router.patch("/name", [
     body("lastname")
     .not().isEmpty().withMessage("Lastname is required")

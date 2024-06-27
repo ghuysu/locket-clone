@@ -36,12 +36,10 @@ var userSchema = new Schema({
         type: String,
         required: true
     },
-    friends: [
-        {
-            type: Schema.Types.ObjectId,
-            ref: 'User'
-        }
-    ]
+    friendList: {
+            type: Array,
+            default: []
+    }
 }, {
     timestamps: true,
     collection: COLLECTION_NAME

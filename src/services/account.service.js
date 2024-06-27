@@ -1,11 +1,47 @@
 "use strict"
 
-const {BadRequestError} = require("../core/error.response")
+const {BadRequestError, InternalServerError} = require("../core/error.response")
 const User = require("../models/user.model")
 const {getImageNameFromUrl, createImageFromFullname, deleteFile} = require("../utils/file.util")
 const {uploadImageToAWSS3, deleteImageInAWSS3} = require("../utils/awsS3.util")
 
 class AccountService {
+    static async addFriend(errors, {userId}, {friendId}) {
+        if (!errors.isEmpty()) {
+            console.log(errors.array())
+            throw new BadRequestError("Friend id is required")
+        }
+        //check friend is existing
+        const friend = await User.findById(friendId).lean()
+        if(!friend) {
+            throw new BadRequestError("Friend is not existing")
+        }
+        //check they are friends or not
+        const user = await User.findById(userId)
+        if (!user) {
+            throw new InternalServerError("Something wrong, try later");
+        }    
+        if (user.friendList.some(f => f.id.toString() === friendId)){
+            throw new BadRequestError("They are already friends")
+        }
+        //add friend into friend list include _id, name, image url
+        user.friendList.push({
+            id: friend._id,
+            name: {
+                firstname: friend.fullname.firstname,
+                lastname: friend.fullname.lastname
+            },
+            profileImageUrl: friend.profileImageUrl
+        })
+        await user.save()
+        //return
+        return user
+    }
+
+    static async removeFriend(errors, {userId}, {friendId}) {
+
+    }
+
     static async updateName(errors, {userId}, {lastname, firstname}) {
         if (!errors.isEmpty()) {
             console.log(errors.array())
@@ -59,7 +95,6 @@ class AccountService {
         }
         //get user
         const user = await User.findById(userId)
-        console.log(image)
         //delete current image
         await deleteImageInAWSS3(await getImageNameFromUrl(user.profileImageUrl))
         //update new image
