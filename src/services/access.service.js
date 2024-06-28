@@ -3,7 +3,7 @@
 const User = require("../models/user.model")
 const SignInKey = require("../models/signInKey")
 const {BadRequestError, } = require("../core/error.response")
-const {sendCodeToCheckExistingEmail} = require("../utils/email.util")
+const {sendCodeToCheckExistingEmail, sendCodeToCheckOwner} = require("../utils/email.util")
 const bcrypt = require("bcryptjs")
 const {createImageFromFullname, deleteFile} = require("../utils/file.util")
 const {uploadImageToAWSS3} = require("../utils/awsS3.util")
@@ -121,6 +121,24 @@ class AccessService {
         }
         //send code to email to confirm user fill a existing email
         const code = await sendCodeToCheckExistingEmail(email)
+        return {
+            "code": code,
+        }
+    }
+
+    static confirmOwner = async (errors, {email}) => {
+        if(!errors.isEmpty())
+        {
+            console.log(errors.array())
+            throw new BadRequestError("Email is invalid")
+        }
+        //check email is registered or not
+        const user = await User.findOne({email}).lean()
+        if(!user){
+            throw new BadRequestError("Email is not registered")
+        }
+        //send code to email to confirm user fill a existing email
+        const code = await sendCodeToCheckOwner(email)
         return {
             "code": code,
         }

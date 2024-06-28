@@ -28,6 +28,26 @@ const sendCodeToCheckExistingEmail = async (targetEmail) => {
     return code;
 }
 
+const sendCodeToCheckOwner= async (targetEmail) => {
+    const code = Math.floor(100000 + Math.random() * 900000);
+    await transporter.sendMail({
+        from: process.env.EMAIL_NAME,
+        to: targetEmail,
+        subject: 'LOCKET - Chang Password Confirmation Code',
+        html: `
+        <div style="font-family: Arial, sans-serif;">
+            <p style="font-size: 16px;">Dear User,</p>
+            <p style="font-size: 16px;">You are receiving this email because you requested to change password on "Locket".</p>
+            <p style="font-size: 24px; text-align: center; font-weight: bold; color: #333;">${code}</p>
+            <p style="font-size: 16px;">Please enter this code to verify your identity and complete the password changing process.</p>
+            <p style="font-size: 16px;">Thank you,<br/>The Locket Team</p>
+            <p style="font-size: 14px; color: #777;">If you did not request this password changing, please ignore this email.</p>
+        </div>`
+    });
+    return code;
+}
+
 module.exports = {
-    sendCodeToCheckExistingEmail
+    sendCodeToCheckExistingEmail,
+    sendCodeToCheckOwner
 }

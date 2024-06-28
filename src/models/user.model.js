@@ -37,8 +37,16 @@ var userSchema = new Schema({
         required: true
     },
     friendList: {
-            type: Array,
-            default: []
+        type: Array,
+        default: []
+    },
+    receivedInviteList: {
+        type: Array,
+        default: []
+    },
+    sentInviteList: {
+        type: Array,
+        default: []
     }
 }, {
     timestamps: true,

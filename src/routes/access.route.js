@@ -35,6 +35,15 @@ router.post("/check-email",
         .trim()
     ], asyncHandler(AccessController.confirmValidEmail))
 
+
+router.post("/check-owner", 
+    [
+        body("email")
+        .isEmail().withMessage("Email is invalid")
+        .normalizeEmail()
+        .trim()
+    ], asyncHandler(AccessController.confirmOwner))
+
 router.post("/sign-up", 
     [
         body("email")

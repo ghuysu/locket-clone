@@ -33,6 +33,13 @@ class AccessController {
         }).send(res)
     }
 
+    static confirmOwner = async (req, res, next) => {
+        new OK({
+            message: "Sent code successfully",
+            metadata: await AccessService.confirmOwner(validationResult(req), req.body)
+        }).send(res)
+    }
+
     static signup = async (req, res, next) => {
         new CREATED({
             message: "Created user successfully",
