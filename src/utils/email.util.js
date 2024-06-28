@@ -33,7 +33,7 @@ const sendCodeToCheckOwner= async (targetEmail) => {
     await transporter.sendMail({
         from: process.env.EMAIL_NAME,
         to: targetEmail,
-        subject: 'LOCKET - Chang Password Confirmation Code',
+        subject: 'LOCKET - Password Changing Confirmation Code',
         html: `
         <div style="font-family: Arial, sans-serif;">
             <p style="font-size: 16px;">Dear User,</p>

@@ -6,15 +6,85 @@ const {getImageNameFromUrl, createImageFromFullname, deleteFile} = require("../u
 const {uploadImageToAWSS3, deleteImageInAWSS3} = require("../utils/awsS3.util")
 
 class AccountService {
-    static async removeInvite(erros, {userId}, {friendId}) {
-
+    static async removeInvite(errors, {userId}, {friendId}) {
+        if (!errors.isEmpty()) {
+            console.log(errors.array())
+            throw new BadRequestError("Friend id is required")
+        }
+        //check friend is existing
+        const friend = await User.findById(friendId)
+        if(!friend) {
+            throw new BadRequestError("Friend is not existing")
+        }
+        //check they are already friends or not
+        const user = await User.findById(userId)
+        if (!user) {
+            throw new InternalServerError("Something wrong, try later");
+        } 
+        if (user.friendList.some(f => f.id.toString() === friendId) || friend.friendList.some(f => f.id.toString() === userId)){
+            throw new BadRequestError("They are already friends")
+        }
+        //check user sent invite or not
+        if(!user.sentInviteList.some(f => f.id.toString() === friendId) || !friend.receivedInviteList.some(f => f.id.toString() === userId)) {
+            throw new BadRequestError("User did not send invite")
+        }
+        //delete friend from user sent friend list
+        user.sentInviteList = user.sentInviteList.filter(f => f.id.toString() !== friendId)
+        //delete user from friend received friend list
+        friend.receivedInviteList = friend.receivedInviteList.filter(f => f.id.toString() !== userId)
+        //return
+        await user.save()
+        await friend.save()
+        return user
     }
 
-    static sendInvite(erros, {userId}, {friendId}) {
+    static async sendInvite(errors, {userId}, {friendId}) {
+        if (!errors.isEmpty()) {
+            console.log(errors.array())
+            throw new BadRequestError("Friend id is required")
+        }
         //check friend is existing
+        const friend = await User.findById(friendId)
+        if(!friend) {
+            throw new BadRequestError("Friend is not existing")
+        }
         //check they are already friends or not
+        const user = await User.findById(userId)
+        if (!user) {
+            throw new InternalServerError("Something wrong, try later");
+        } 
+        if (user.friendList.some(f => f.id.toString() === friendId) || friend.friendList.some(f => f.id.toString() === userId)){
+            throw new BadRequestError("They are already friends")
+        }
+        //check user already send invite or not
+        if(user.sentInviteList.some(f => f.id.toString() === friendId) || friend.receivedInviteList.some(f => f.id.toString() === userId)) {
+            throw new BadRequestError("User sent invite before")
+        }
+        //check friend sent invite or not
+        if(user.receivedInviteList.some(f => f.id.toString() === friendId) || friend.sentInviteList.some(f => f.id.toString() === userId)) {
+            throw new BadRequestError("Friend sent invite before")
+        }
         //add friend into user received invite list
-        //add user into friend sent invite list        
+        friend.receivedInviteList.push({
+            id: user._id,
+            name: {
+                firstname: user.fullname.firstname,
+                lastname: user.fullname.lastname
+            },
+            profileImageUrl: user.profileImageUrl
+        })
+        //add user into friend sent invite list 
+        user.sentInviteList.push({
+            id: friend._id,
+            name: {
+                firstname: friend.fullname.firstname,
+                lastname: friend.fullname.lastname
+            },
+            profileImageUrl: friend.profileImageUrl
+        })       
+        await user.save()
+        await friend.save()
+        return user
     }
 
     static async removeFriend(errors, {userId}, {friendId}) {
@@ -23,7 +93,7 @@ class AccountService {
             throw new BadRequestError("Friend id is required")
         }
         //check friend is existing
-        const friend = await User.findById(friendId).lean()
+        const friend = await User.findById(friendId)
         if(!friend) {
             throw new BadRequestError("Friend is not existing")
         }
@@ -39,6 +109,7 @@ class AccountService {
         user.friendList = user.friendList.filter(f => f.id.toString() !== friendId)
         friend.friendList = friend.friendList.filter(f => f.id.toString() !== userId)
         await user.save()
+        await friend.save()
         return user
     }
     
@@ -59,6 +130,13 @@ class AccountService {
         }    
         if (user.friendList.some(f => f.id.toString() === friendId) || friend.friendList.some(f => f.id.toString() === userId)){
             throw new BadRequestError("They are already friends")
+        }
+        //check received invite or not
+        console.log(!user.receivedInviteList.some(f => f.id.toString() === friendId))
+        console.log(!friend.sentInviteList.some(f => f.id.toString() === userId))
+        console.log(!user.receivedInviteList.some(f => f.id.toString() === friendId) || !friend.sentInviteList.some(f => f.id.toString === userId))
+        if(!user.receivedInviteList.some(f => f.id.toString() === friendId) || !friend.sentInviteList.some(f => f.id.toString() === userId)) {
+            throw new BadRequestError("No invite found")
         }
         //add friend into friend list include _id, name, image url each other
         user.friendList.push({

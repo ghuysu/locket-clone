@@ -5,6 +5,20 @@ const {OK} = require("../core/succes.response")
 const {validationResult} = require("express-validator")
 
 class AccountController {
+    static async sendInvite(req, res, next) {
+        new OK({
+            message: "Sent invite successfully",
+            metadata: await AccountService.sendInvite(validationResult(req), req.user, req.body)
+        }).send(res)
+    }
+
+    static async removeInvite(req, res, next) {
+        new OK({
+            message: "Removed invite successfully",
+            metadata: await AccountService.removeInvite(validationResult(req), req.user, req.body)
+        }).send(res)
+    }
+
     static async removeFriend(req, res, next) {
         new OK({
             message: "Remove friend successfully",
@@ -12,10 +26,10 @@ class AccountController {
         }).send(res)
     }
 
-    static async addFriend(req, res, next) {
+    static async acceptFriend(req, res, next) {
         new OK({
-            message: "Add friend successfully",
-            metadata: await AccountService.addFriend(validationResult(req), req.user, req.body)
+            message: "Accept friend successfully",
+            metadata: await AccountService.acceptFriend(validationResult(req), req.user, req.body)
         }).send(res)
     }
 

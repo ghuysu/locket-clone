@@ -14,6 +14,7 @@ require("dotenv").config()
 class AccessService {  
     static changePassword = async (errors, {email, password}) => {
         if(!errors.isEmpty()){
+            console.log(errors.array())
             throw new BadRequestError("Email and password are required")
         }
         if(!validatePassword(password)){
