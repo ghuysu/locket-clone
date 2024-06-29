@@ -6,6 +6,7 @@ const chokidar = require("chokidar")
 const path = require("path")
 const accessRoute = require("./routes/access.route")
 const accountRoute = require("./routes/account.route")
+const searchRoute = require("./routes/search.route")
 const {checkApiKey} = require("./auth/apikey.auth")
 const asyncHandler = require("./helpers/asyncHandler.helper")
 require("dotenv").config()
@@ -28,6 +29,7 @@ app.use(express.urlencoded({
 app.use(asyncHandler(checkApiKey))
 app.use("/access", accessRoute)
 app.use("/account", accountRoute)
+app.use("/search", searchRoute)
 
 app.use((req, res, next) => {
     const error = new Error("Not found")
