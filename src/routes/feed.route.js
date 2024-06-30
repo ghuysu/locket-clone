@@ -17,6 +17,12 @@ router.post("/create", uploadImage.single('image'), [
     .not().isEmpty().withMessage("Visibility is required")
     ], asyncHandler(FeedController.createFeed))
 
-router.patch("/update/:feedId")
+router.patch("/update/:feedId", [
+    body("description")
+    .not().isEmpty().withMessage("Description is required"),
+
+    body("visibility")
+    .not().isEmpty().withMessage("Visibility is required")
+    ], asyncHandler(FeedController.updateFeed))
 
 module.exports = router
