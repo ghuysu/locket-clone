@@ -8,10 +8,8 @@ const {authenticateToken} = require("../auth/loginKey.auth")
 
 router.use(asyncHandler(authenticateToken))
 
-router.post("/", [
-    body("searchValue")
-    .not().isEmpty().withMessage("Search value is required")
-    .trim()
-], asyncHandler(SearchController.searchUser))
+router.get("/:searchValue", asyncHandler(SearchController.searchUser))
+
+router.get("/user/:searchId", asyncHandler(SearchController.getUserInfor))
 
 module.exports = router

@@ -5,8 +5,8 @@ const {BadRequestError} = require("../core/error.response")
 const {isValidObjectId} = require("../utils/objectId.util")
 
 class SearchService {
-    static searchUser  = async (errors, { userId }, { searchValue }) => {
-        if (!errors.isEmpty()) {
+    static searchUser  = async ({ userId }, { searchValue }) => {
+        if (!searchValue) {
             throw new BadRequestError("Search value is required")
         }
         //ex: "To Uyen Dang" -> /To|Uyen|Dang/i
@@ -25,10 +25,16 @@ class SearchService {
     }
 
     static getUserInfor = async ({userId}, {searchId}) => {
-        if(isValidObjectId(id)) {
+        if(!isValidObjectId(searchId)) {
             throw new BadRequestError("Search id is invalid")
         }
-        const user = await User.findById(searchId).lean()
+        let user
+        if(userId === searchId){
+            user = await User.findById(searchId).lean()
+        }
+        else {
+            user = await User.findById(searchId).select('_id fullname email birthday profileImageUrl').lean()
+        }
         if(!user) {
             throw new BadRequestError("No user found")
         }

@@ -8,7 +8,14 @@ class SearchController {
     static searchUser = async (req, res, next) => {
         new OK({
             message: "Search successfully",
-            metadata: await SearchService.searchUser(validationResult(req), req.user, req.body)
+            metadata: await SearchService.searchUser(req.user, req.params)
+        }).send(res)
+    }
+
+    static getUserInfor = async (req, res, next) => {
+        new OK({
+            message: "Get user information successfully",
+            metadata: await SearchService.getUserInfor(req.user, req.params)
         }).send(res)
     }
 }
