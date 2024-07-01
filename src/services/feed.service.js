@@ -2,8 +2,8 @@
 
 const Feed = require("../models/feed.model")
 const {BadRequestError} = require("../core/error.response")
-const {deleteFile} = require("../utils/file.util")
-const {uploadImageToAWSS3} = require("../utils/awsS3.util")
+const {deleteFile, getImageNameFromUrl} = require("../utils/file.util")
+const {uploadImageToAWSS3, deleteImageInAWSS3} = require("../utils/awsS3.util")
 const {isValidObjectId} = require("../utils/objectId.util")
 
 class FeedService {
@@ -75,8 +75,18 @@ class FeedService {
         return updatedFeed
     }
 
-    static deleteFeed = async () => {
-
+    static deleteFeed = async ({userId}, {feedId}) => {
+        if(!isValidObjectId(feedId)){
+            throw new BadRequestError("Feed id is invalid")
+        }
+        //delete in db
+        const feed = await Feed.findOneAndDelete({_id: feedId, userId: userId}).lean()
+        if(!feed) {
+            throw new BadRequestError("No feed found")
+        }
+        //delete image in s3
+        await deleteImageInAWSS3(await getImageNameFromUrl(feed.imageUrl))
+        return null
     }
 }
 

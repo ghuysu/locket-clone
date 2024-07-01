@@ -25,4 +25,6 @@ router.patch("/update/:feedId", [
     .not().isEmpty().withMessage("Visibility is required")
     ], asyncHandler(FeedController.updateFeed))
 
+router.delete("/delete/:feedId", asyncHandler(FeedController.deleteFeed))
+
 module.exports = router

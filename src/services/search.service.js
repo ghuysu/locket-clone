@@ -2,6 +2,7 @@
 
 const User = require("../models/user.model")
 const {BadRequestError} = require("../core/error.response")
+const {isValidObjectId} = require("../utils/objectId.util")
 
 class SearchService {
     static searchUser  = async (errors, { userId }, { searchValue }) => {
@@ -21,6 +22,17 @@ class SearchService {
             ]
         }).select('_id fullname profileImageUrl').lean();
         return users
+    }
+
+    static getUserInfor = async ({userId}, {searchId}) => {
+        if(isValidObjectId(id)) {
+            throw new BadRequestError("Search id is invalid")
+        }
+        const user = await User.findById(searchId).lean()
+        if(!user) {
+            throw new BadRequestError("No user found")
+        }
+        return user
     }
 }
 

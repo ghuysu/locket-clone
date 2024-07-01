@@ -7,7 +7,7 @@ const {validationResult} = require("express-validator")
 class FeedController {
     static createFeed = async (req, res, next) => {
         new CREATED({
-            message: "Create feed successfully",
+            message: "Created feed successfully",
             metadata: await FeedService.createFeed(validationResult(req), req.user, req.body, req.file)
         }).send(res)
     }
@@ -16,6 +16,13 @@ class FeedController {
         new OK({
             message: "Updated feed successfully",
             metadata: await FeedService.updateFeed(validationResult(req), req.user, req.params, req.body)
+        }).send(res)
+    }
+
+    static deleteFeed = async (req, res, next) => {
+        new OK({
+            message: "Deleted feed successfully",
+            metadata: await FeedService.deleteFeed(req.user, req.params)
         }).send(res)
     }
 }
