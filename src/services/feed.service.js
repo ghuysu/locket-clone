@@ -1,6 +1,7 @@
 "use strict"
 
 const Feed = require("../models/feed.model")
+const User = require("../models/user.model")
 const {BadRequestError} = require("../core/error.response")
 const {deleteFile, getImageNameFromUrl} = require("../utils/file.util")
 const {uploadImageToAWSS3, deleteImageInAWSS3} = require("../utils/awsS3.util")
@@ -87,6 +88,77 @@ class FeedService {
         //delete image in s3
         await deleteImageInAWSS3(await getImageNameFromUrl(feed.imageUrl))
         return null
+    }
+
+    static getEveryoneFeed = async ({userId}, {page}) => {
+        const ITEMS_PER_PAGE = 20
+        if (!Number.isInteger(page)){
+            page = 1
+        }
+        //get friend id list
+        const user = await User.findById(userId).select("friendList").lean()
+        const friendIdList = user.friendList.map(i => i.id.toString())
+        const feeds = await Feed.find({
+            $or: [
+                {
+                    //get friend feeds (feeds have userId field match friend id 
+                    //and visibility is everyone or match userId)
+                    userId: {$in: friendIdList},
+                    $or: [
+                        {visibility: 'everyone'},
+                        {visibility: {$elemMatch: {$eq: userId}}}
+                    ]
+                },
+                {
+                    //get user's feeds
+                    userId: userId
+                }
+            ]
+        })
+        .sort({createdAt: -1})
+        .skip(ITEMS_PER_PAGE*(page-1))
+        .limit(ITEMS_PER_PAGE)
+        .lean()
+        return feeds
+    }   
+
+    static getCertainFeed = async ({userId}, {searchId}, {page}) => {
+        const ITEMS_PER_PAGE = 20
+        if(!isValidObjectId(searchId)) {
+            throw new BadRequestError("Search id is invalid")
+        }
+        if(!Number.isInteger(page)) {
+            page = 1
+        }
+        //check search id is current userId or not
+        //if not, check whether they are friend or not
+        if(userId !== searchId){
+            const user = await User.findById(userId).lean()
+            const isFriend = user.friendList.some(i => i.id.toString() === searchId)
+            if(!isFriend){
+                throw new BadRequestError("They are not friends")
+            }
+        }
+        const feeds = await Feed.find({
+            $or: [
+                {
+                    userId: searchId,
+                    $or: [
+                        {visibility: 'everyone'},
+                        {visibility: {$elemMatch: {$eq: userId}}}
+                    ]
+                },
+                {
+                    userId: userId
+                }
+            ]
+            
+        })
+        .sort({createdAt: -1})
+        .skip((page-1)*ITEMS_PER_PAGE)
+        .limit(ITEMS_PER_PAGE)
+        .lean()
+        return feeds
     }
 }
 

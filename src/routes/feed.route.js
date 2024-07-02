@@ -27,4 +27,9 @@ router.patch("/update/:feedId", [
 
 router.delete("/delete/:feedId", asyncHandler(FeedController.deleteFeed))
 
+router.get("/everyone", asyncHandler(FeedController.getEveryoneFeed))
+
+router.get("/certain/:searchId", asyncHandler(FeedController.getCertainFeed))
+
+
 module.exports = router

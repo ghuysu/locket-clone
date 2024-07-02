@@ -25,6 +25,20 @@ class FeedController {
             metadata: await FeedService.deleteFeed(req.user, req.params)
         }).send(res)
     }
+
+    static getEveryoneFeed = async (req, res, next) => {
+        new OK({
+            message: "Get all-friend feeds successfully",
+            metadata: await FeedService.getEveryoneFeed(req.user, req.query)
+        }).send(res)
+    }
+
+    static getCertainFeed = async (req, res, next) => {
+        new OK({
+            message: "Get certain-friend feeds successfully",
+            metadata: await FeedService.getCertainFeed(req.user, req.params, req.query)
+        }).send(res)
+    }
 }
 
 module.exports = FeedController
