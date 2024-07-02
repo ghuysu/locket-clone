@@ -36,7 +36,8 @@ const feedSchema = new Schema({
     userId: {
         type: Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        required: true,
+        index: true
     },
     description: {
         type: String,
@@ -50,12 +51,22 @@ const feedSchema = new Schema({
         type: Schema.Types.Mixed,
         required: true
     },
-    reactions: [reactionSchema]
+    reactions: [reactionSchema],
+    reactionStatistic: {
+        like: {type: Number, default: 0},
+        love: {type: Number, default: 0},
+        haha: {type: Number, default: 0},
+        wow: {type: Number, default: 0},
+        sad: {type: Number, default: 0},
+        angry: {type: Number, default: 0},
+    },
+    createdAt: { 
+        type: Date, 
+        default: Date.now, 
+        index: true }
 }, {
     timestamps: true,
     collection: COLLECTION_NAME
 })
-
-feedSchema.index({ userId: 1 });
 
 module.exports = model(DOCUMENT_NAME, feedSchema)

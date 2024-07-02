@@ -160,6 +160,56 @@ class FeedService {
         .lean()
         return feeds
     }
+
+    static reactFeed = async (errors, {userId}, {feedId}, {icon}) => {
+        if(!errors.isEmpty()) {
+            throw new BadRequestError("Icon is required")
+        }
+        //check icon is valid or not
+        const reactIcons = ['like', 'love', 'haha', 'wow', 'sad', 'angry']
+        const isValidIcon = reactIcons.some(i => i === icon)
+        if(!isValidIcon) {
+            throw new BadRequestError("Icon is invalid")
+        }
+        //check feedId is valid or not
+        if(!isValidObjectId(feedId)){
+            throw new BadRequestError("Feed id is invalid")
+        }
+        const feed = await Feed.findById(feedId)
+        if(!feed){
+            throw new BadRequestError("Feed is not existing")
+        }
+        if(feed.userId.toString() === userId){
+            throw new BadRequestError("Can not react your own feed")
+        }
+        const user = await User.findById(userId).lean()
+        //check whether reacted before
+        const isReacted = feed.reactions.some(i => i.userId.toString() === userId)
+        if(isReacted){
+            const reactIndex = feed.reactions.findIndex(i => i.userId.toString() === userId)
+            const beforeIcon = feed.reactions[reactIndex].icon
+            feed.reactionStatistic[beforeIcon] -= 1
+            feed.reactionStatistic[icon] += 1
+            feed.reactions[reactIndex] = {
+                userId: userId,
+                fullname: user.fullname,
+                profileImageUrl: user.profileImageUrl,
+                icon: icon
+            }
+            await feed.save()
+            return feed
+        }
+        //push feed reaction
+        feed.reactions.push({
+            userId: userId,
+            fullname: user.fullname,
+            profileImageUrl: user.profileImageUrl,
+            icon: icon
+        })
+        feed.reactionStatistic[icon] += 1
+        await feed.save()
+        return feed
+    }
 }
 
 module.exports = FeedService

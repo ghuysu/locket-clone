@@ -39,6 +39,13 @@ class FeedController {
             metadata: await FeedService.getCertainFeed(req.user, req.params, req.query)
         }).send(res)
     }
+
+    static reactFeed = async (req, res, next) => {
+        new OK({
+            message: "Reacted feed successfully",
+            metadata: await FeedService.reactFeed(validationResult(req), req.user, req.params, req.body)
+        }).send(res)
+    }
 }
 
 module.exports = FeedController

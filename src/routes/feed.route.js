@@ -31,5 +31,9 @@ router.get("/everyone", asyncHandler(FeedController.getEveryoneFeed))
 
 router.get("/certain/:searchId", asyncHandler(FeedController.getCertainFeed))
 
+router.post("/:feedId", [
+    body("icon")
+    .not().isEmpty().withMessage("Icon is required")
+    ], asyncHandler(FeedController.reactFeed))
 
 module.exports = router
