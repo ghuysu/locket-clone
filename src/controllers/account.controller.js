@@ -60,6 +60,13 @@ class AccountController {
             metadata: await AccountService.updateEmail(validationResult(req), req.user, req.body)
         }).send(res)
     }
+
+    static async deleteAccount(req, res, next) {
+        new OK({
+            message: "Deleted account successfully",
+            metadata: await AccountService.deleteAccount(req.user)
+        }).send(res)
+    }
 }
 
 module.exports = AccountController

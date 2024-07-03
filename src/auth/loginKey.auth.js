@@ -4,7 +4,6 @@ const { token } = require('morgan');
 require('dotenv').config();
 
 const authenticateToken = async (req, res, next) => {
-    let expiredKey
     const key = req.headers['authorization']
     const userId = req.headers['user-id']
     if (!key) {
@@ -40,7 +39,7 @@ const authenticateToken = async (req, res, next) => {
         next();
     } catch (err) {
         if (err.name === 'TokenExpiredError') {
-            await SignInKey.deleteOne({ userId: userId, key: token });
+            await SignInKey.deleteMany({ userId: userId});
             return res.status(403).json({
                 status: 403,
                 message: 'Token has expired and has been removed, please sign in again'

@@ -2,6 +2,8 @@
 
 const {BadRequestError, InternalServerError} = require("../core/error.response")
 const User = require("../models/user.model")
+const SignInKey = require("../models/signInKey")
+const Feed = require("../models/feed.model")
 const {getImageNameFromUrl, createImageFromFullname, deleteFile} = require("../utils/file.util")
 const {uploadImageToAWSS3, deleteImageInAWSS3} = require("../utils/awsS3.util")
 
@@ -229,8 +231,21 @@ class AccountService {
         return user
     }
 
-    static deleteAccount({}) {
-        //check 
+    static async deleteAccount({userId}) {
+        //delete user
+        const user = await User.findByIdAndDelete(userId).lean()
+        if(!user) {
+            throw new BadRequestError("No user found")
+        }
+        await Promise.all([
+            //delete image in s3
+            deleteImageInAWSS3(await getImageNameFromUrl(user.profileImageUrl)),
+            //delete sign in keys
+            SignInKey.deleteMany({userId: userId}),
+            //delete feeds
+            Feed.deleteMany({userId: userId})
+        ])
+        return null
     }
 }
 

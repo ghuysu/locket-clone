@@ -58,4 +58,6 @@ router.patch("/email", [
 
 router.patch("/profile-image", uploadImage.single('image'), asyncHandler(AccountController.updateProfileImage))
 
+router.delete("/delete", asyncHandler(AccountController.deleteAccount))
+
 module.exports = router
