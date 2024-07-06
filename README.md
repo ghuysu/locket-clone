@@ -28,12 +28,12 @@ The server provides the necessary APIs to manage users, authentication, uploadin
 ### Installing
 **1. Clone the repository:** 
 ```
-git clone https://github.com/ghuysu/locket-clone.
+git clone https://github.com/ghuysu/locket-clone
 ```
 
 **2. Install the necessary packages:**
 ```
-npm install --save [packages].
+npm install --save [packages]
 ```
 
 **3. Create a `.env` file in the root directory of the project and configure the required environment variables:**
