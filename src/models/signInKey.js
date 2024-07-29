@@ -1,24 +1,28 @@
-"use strict"
+"use strict";
 
-const {model, Schema} = require("mongoose")
+const { model, Schema } = require("mongoose");
 
-const DOCUMENT_NAME = 'SigninKey'
-const COLLECTION_NAME = 'SigninKeys'
+const DOCUMENT_NAME = "SigninKey";
+const COLLECTION_NAME = "SigninKeys";
 
-const signinKeySchema = new Schema({
+const signinKeySchema = new Schema(
+  {
     userId: {
-        ref: "User",
-        type: Schema.Types.ObjectId,
-        required: true
+      ref: "User",
+      type: Schema.Types.ObjectId,
+      required: true,
+      index: true,
     },
 
     key: {
-        type: String,
-        required: true,
-    }
-}, {
+      type: String,
+      required: true,
+    },
+  },
+  {
     timestamps: true,
-    collection: COLLECTION_NAME
-})
+    collection: COLLECTION_NAME,
+  }
+);
 
-module.exports = model(DOCUMENT_NAME, signinKeySchema)
+module.exports = model(DOCUMENT_NAME, signinKeySchema);
