@@ -26,7 +26,8 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^6.9.14",
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
     "chokidar": "^3.6.0"

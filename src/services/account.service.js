@@ -21,6 +21,8 @@ const {
   sendEmailToDeletedAccount,
   sendCodeForChangeEmail,
 } = require("../utils/email.util");
+const { Types } = require("mongoose");
+const { emitEvent } = require("../utils/socketIO.util");
 
 class AccountService {
   static async removeInviteFromReceiver(errors, { userId }, { friendId }) {
@@ -28,41 +30,62 @@ class AccountService {
       console.log(errors.array());
       throw new BadRequestError("Friend id is required");
     }
-    //check friend is existing
-    const friend = await User.findById(friendId);
+
+    const userIdObj = new Types.ObjectId(userId);
+    const friendIdObj = new Types.ObjectId(friendId);
+
+    // Kiểm tra xem bạn bè có tồn tại không
+    const friend = await User.findById(friendIdObj);
     if (!friend) {
       throw new BadRequestError("Friend is not existing");
     }
-    //check they are already friends or not
-    const user = await User.findById(userId);
+
+    // Kiểm tra xem người dùng có tồn tại không
+    const user = await User.findById(userIdObj);
     if (!user) {
-      throw new InternalServerError("Something wrong, try later");
+      throw new InternalServerError("Something went wrong, try later");
     }
+
+    // Kiểm tra xem họ đã là bạn chưa
     if (
-      user.friendList.some((f) => f.id.toString() === friendId) ||
-      friend.friendList.some((f) => f.id.toString() === userId)
+      user.friendList.some((f) => f.equals(friendIdObj)) ||
+      friend.friendList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("They are already friends");
     }
-    //check user received invite or not
+
+    // Kiểm tra xem người dùng có nhận lời mời không
     if (
-      !user.receivedInviteList.some((f) => f.id.toString() === friendId) ||
-      !friend.sentInviteList.some((f) => f.id.toString() === userId)
+      !user.receivedInviteList.some((f) => f.equals(friendIdObj)) ||
+      !friend.sentInviteList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("User did not receive invite");
     }
-    //delete friend out of user received list
+
+    // Xóa bạn khỏi danh sách nhận lời mời của người dùng
     user.receivedInviteList = user.receivedInviteList.filter(
-      (f) => f.id.toString() !== friendId
+      (id) => !id.equals(friendIdObj)
     );
-    //delete user out of friend sent list
+
+    // Xóa người dùng khỏi danh sách gửi lời mời của bạn
     friend.sentInviteList = friend.sentInviteList.filter(
-      (f) => f.id.toString() !== userId
+      (id) => !id.equals(userIdObj)
     );
-    //return
+
+    // Lưu thay đổi
     await user.save();
     await friend.save();
-    return user;
+
+    // Trả về người dùng đã được populate
+    const populatedUser = await User.findById(userIdObj)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .lean();
+
+    emitEvent("user", { userId: friendId, action: "friend" });
+
+    return populatedUser;
   }
 
   static async removeInvite(errors, { userId }, { friendId }) {
@@ -70,41 +93,62 @@ class AccountService {
       console.log(errors.array());
       throw new BadRequestError("Friend id is required");
     }
-    //check friend is existing
-    const friend = await User.findById(friendId);
+
+    const userIdObj = new Types.ObjectId(userId);
+    const friendIdObj = new Types.ObjectId(friendId);
+
+    // Kiểm tra xem bạn bè có tồn tại không
+    const friend = await User.findById(friendIdObj);
     if (!friend) {
       throw new BadRequestError("Friend is not existing");
     }
-    //check they are already friends or not
-    const user = await User.findById(userId);
+
+    // Kiểm tra xem người dùng có tồn tại không
+    const user = await User.findById(userIdObj);
     if (!user) {
-      throw new InternalServerError("Something wrong, try later");
+      throw new InternalServerError("Something went wrong, try later");
     }
+
+    // Kiểm tra xem họ đã là bạn chưa
     if (
-      user.friendList.some((f) => f.id.toString() === friendId) ||
-      friend.friendList.some((f) => f.id.toString() === userId)
+      user.friendList.some((f) => f.equals(friendIdObj)) ||
+      friend.friendList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("They are already friends");
     }
-    //check user sent invite or not
+
+    // Kiểm tra xem người dùng có gửi lời mời không
     if (
-      !user.sentInviteList.some((f) => f.id.toString() === friendId) ||
-      !friend.receivedInviteList.some((f) => f.id.toString() === userId)
+      !user.sentInviteList.some((f) => f.equals(friendIdObj)) ||
+      !friend.receivedInviteList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("User did not send invite");
     }
-    //delete friend from user sent friend list
+
+    // Xóa bạn khỏi danh sách gửi lời mời của người dùng
     user.sentInviteList = user.sentInviteList.filter(
-      (f) => f.id.toString() !== friendId
+      (f) => !f.equals(friendIdObj)
     );
-    //delete user from friend received friend list
+
+    // Xóa người dùng khỏi danh sách nhận lời mời của bạn
     friend.receivedInviteList = friend.receivedInviteList.filter(
-      (f) => f.id.toString() !== userId
+      (f) => !f.equals(userIdObj)
     );
-    //return
+
+    // Lưu thay đổi
     await user.save();
     await friend.save();
-    return user;
+
+    // Trả về người dùng đã được populate
+    const populatedUser = await User.findById(userIdObj)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .lean();
+
+    emitEvent("user", { userId: friendId, action: "friend" });
+
+    return populatedUser;
   }
 
   static async sendInvite(errors, { userId }, { friendId }) {
@@ -112,57 +156,66 @@ class AccountService {
       console.log(errors.array());
       throw new BadRequestError("Friend id is required");
     }
-    //check friend is existing
-    const friend = await User.findById(friendId);
+
+    const userIdObj = new Types.ObjectId(userId);
+    const friendIdObj = new Types.ObjectId(friendId);
+
+    // Kiểm tra xem người bạn có tồn tại không
+    const friend = await User.findById(friendIdObj);
     if (!friend) {
       throw new BadRequestError("Friend is not existing");
     }
-    //check they are already friends or not
-    const user = await User.findById(userId);
+
+    // Kiểm tra xem người dùng có tồn tại không
+    const user = await User.findById(userIdObj);
     if (!user) {
-      throw new InternalServerError("Something wrong, try later");
+      throw new InternalServerError("Something went wrong, try later");
     }
+
+    // Kiểm tra xem hai người dùng đã là bạn bè chưa
     if (
-      user.friendList.some((f) => f.id.toString() === friendId) ||
-      friend.friendList.some((f) => f.id.toString() === userId)
+      user.friendList.some((f) => f.equals(friendIdObj)) ||
+      friend.friendList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("They are already friends");
     }
-    //check user already send invite or not
+
+    // Kiểm tra xem người dùng đã gửi lời mời hay chưa
     if (
-      user.sentInviteList.some((f) => f.id.toString() === friendId) ||
-      friend.receivedInviteList.some((f) => f.id.toString() === userId)
+      user.sentInviteList.some((f) => f.equals(friendIdObj)) ||
+      friend.receivedInviteList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("User sent invite before");
     }
-    //check friend sent invite or not
+
+    // Kiểm tra xem người bạn đã gửi lời mời chưa
     if (
-      user.receivedInviteList.some((f) => f.id.toString() === friendId) ||
-      friend.sentInviteList.some((f) => f.id.toString() === userId)
+      user.receivedInviteList.some((f) => f.equals(friendIdObj)) ||
+      friend.sentInviteList.some((f) => f.equals(userId))
     ) {
       throw new BadRequestError("Friend sent invite before");
     }
-    //add friend into user received invite list
-    friend.receivedInviteList.push({
-      id: user._id,
-      name: {
-        firstname: user.fullname.firstname,
-        lastname: user.fullname.lastname,
-      },
-      profileImageUrl: user.profileImageUrl,
-    });
-    //add user into friend sent invite list
-    user.sentInviteList.push({
-      id: friend._id,
-      name: {
-        firstname: friend.fullname.firstname,
-        lastname: friend.fullname.lastname,
-      },
-      profileImageUrl: friend.profileImageUrl,
-    });
+
+    // Thêm người dùng vào danh sách lời mời nhận của bạn
+    friend.receivedInviteList.push(user._id);
+
+    // Thêm bạn vào danh sách lời mời gửi của người dùng
+    user.sentInviteList.push(friend._id);
+
+    // Lưu thay đổi vào cơ sở dữ liệu
     await user.save();
     await friend.save();
-    return user;
+
+    emitEvent("user", { userId: friendId, action: "friend" });
+
+    // Trả về người dùng đã được populate
+    const populatedUser = await User.findById(userIdObj)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .lean();
+
+    return populatedUser;
   }
 
   static async removeFriend(errors, { userId }, { friendId }) {
@@ -170,98 +223,120 @@ class AccountService {
       console.log(errors.array());
       throw new BadRequestError("Friend id is required");
     }
-    //check friend is existing
-    const friend = await User.findById(friendId);
+
+    const userIdObj = new Types.ObjectId(userId);
+    const friendIdObj = new Types.ObjectId(friendId);
+
+    // Kiểm tra xem người bạn có tồn tại không
+    const friend = await User.findById(friendIdObj);
     if (!friend) {
       throw new BadRequestError("Friend is not existing");
     }
-    //check they are friends or not
-    const user = await User.findById(userId);
+
+    // Kiểm tra xem người dùng có tồn tại không
+    const user = await User.findById(userIdObj);
     if (!user) {
-      throw new InternalServerError("Something wrong, try later");
+      throw new InternalServerError("Something went wrong, try later");
     }
+
+    // Kiểm tra xem họ có phải là bạn bè không
     if (
-      !user.friendList.some((f) => f.id.toString() === friendId) ||
-      !friend.friendList.some((f) => f.id.toString() === userId)
+      !user.friendList.some((f) => f.equals(friendIdObj)) ||
+      !friend.friendList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("They are not friends");
     }
-    //update friendList
-    user.friendList = user.friendList.filter(
-      (f) => f.id.toString() !== friendId
-    );
-    friend.friendList = friend.friendList.filter(
-      (f) => f.id.toString() !== userId
-    );
+
+    // Cập nhật danh sách bạn bè
+    user.friendList = user.friendList.filter((f) => !f.equals(friendIdObj));
+    friend.friendList = friend.friendList.filter((f) => !f.equals(userIdObj));
+
+    // Lưu thay đổi vào cơ sở dữ liệu
     await user.save();
     await friend.save();
-    return user;
+
+    // Trả về người dùng đã được populate
+    const populatedUser = await User.findById(userIdObj)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .lean();
+
+    emitEvent("user", { userId: friendId, action: "friend" });
+
+    return populatedUser;
   }
 
   static async acceptFriend(errors, { userId }, { friendId }) {
+    // Kiểm tra lỗi xác thực
     if (!errors.isEmpty()) {
       console.log(errors.array());
       throw new BadRequestError("Friend id is required");
     }
-    //check friend is existing
-    const friend = await User.findById(friendId);
+    console.log(friendId);
+
+    // Chuyển đổi friendId và userId thành ObjectId
+    const friendIdObj = new Types.ObjectId(friendId);
+    const userIdObj = new Types.ObjectId(userId);
+
+    // Kiểm tra xem người bạn có tồn tại hay không
+    const friend = await User.findById(friendIdObj);
     if (!friend) {
       throw new BadRequestError("Friend is not existing");
     }
-    //check they are friends or not
-    const user = await User.findById(userId);
+
+    // Kiểm tra xem người dùng có tồn tại hay không
+    const user = await User.findById(userIdObj);
     if (!user) {
-      throw new InternalServerError("Something wrong, try later");
+      throw new InternalServerError("Something went wrong, try later");
     }
+
+    // Kiểm tra xem hai người dùng đã là bạn bè chưa
     if (
-      user.friendList.some((f) => f.id.toString() === friendId) ||
-      friend.friendList.some((f) => f.id.toString() === userId)
+      user.friendList.some((f) => f.equals(friendIdObj)) ||
+      friend.friendList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("They are already friends");
     }
-    //check received invite or not
-    console.log(
-      !user.receivedInviteList.some((f) => f.id.toString() === friendId)
-    );
-    console.log(!friend.sentInviteList.some((f) => f.id.toString() === userId));
-    console.log(
-      !user.receivedInviteList.some((f) => f.id.toString() === friendId) ||
-        !friend.sentInviteList.some((f) => f.id.toString === userId)
-    );
+
+    // Kiểm tra xem người dùng có nhận lời mời không và bạn có gửi lời mời không
     if (
-      !user.receivedInviteList.some((f) => f.id.toString() === friendId) ||
-      !friend.sentInviteList.some((f) => f.id.toString() === userId)
+      !user.receivedInviteList.some((f) => f.equals(friendIdObj)) ||
+      !friend.sentInviteList.some((f) => f.equals(userIdObj))
     ) {
       throw new BadRequestError("No invite found");
     }
-    //add friend into friend list include _id, name, image url each other
-    user.friendList.push({
-      id: friend._id,
-      name: {
-        firstname: friend.fullname.firstname,
-        lastname: friend.fullname.lastname,
-      },
-      profileImageUrl: friend.profileImageUrl,
-    });
-    friend.friendList.push({
-      id: user._id,
-      name: {
-        firstname: user.fullname.firstname,
-        lastname: user.fullname.lastname,
-      },
-      profileImageUrl: user.profileImageUrl,
-    });
-    //remove invite
+
+    // Thêm bạn vào danh sách bạn bè của người dùng
+    user.friendList.push(friendIdObj);
+
+    // Thêm người dùng vào danh sách bạn bè của bạn
+    friend.friendList.push(userIdObj);
+
+    // Xóa lời mời
     user.receivedInviteList = user.receivedInviteList.filter(
-      (f) => f.id.toString() !== friendId
+      (f) => !f.equals(friendIdObj)
     );
+
     friend.sentInviteList = friend.sentInviteList.filter(
-      (f) => f.id.toString() !== userId
+      (f) => !f.equals(userIdObj)
     );
+
+    // Lưu thay đổi vào cơ sở dữ liệu
     await user.save();
     await friend.save();
-    //return
-    return user;
+
+    // Trả về đối tượng user đã được populate
+    const populatedUser = await User.findById(userIdObj)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .lean() // Chuyển đổi kết quả thành đối tượng thuần túy
+      .exec();
+
+    emitEvent("user", { userId: friendId, action: "friend" });
+
+    return populatedUser;
   }
 
   static async updateName(errors, { userId }, { lastname, firstname }) {
@@ -270,7 +345,11 @@ class AccountService {
       throw new BadRequestError("Firstname and lastname are required");
     }
     //update name
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl");
+
     user.fullname.firstname = firstname;
     user.fullname.lastname = lastname;
     //delete current avatar
@@ -287,6 +366,10 @@ class AccountService {
       user.profileImageUrl = imageUrl;
     }
     await user.save();
+    emitEvent("user", {
+      userList: user.friendList.map((f) => f._id),
+      action: "user",
+    });
     return user;
   }
 
@@ -294,9 +377,16 @@ class AccountService {
     if (!errors.isEmpty()) {
       throw new BadRequestError("Birthday is required");
     }
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl");
     user.birthday = birthday;
     await user.save();
+    emitEvent("user", {
+      userList: user.friendList.map((f) => f._id),
+      action: "user",
+    });
     return user;
   }
 
@@ -336,9 +426,17 @@ class AccountService {
     if (!errors.isEmpty()) {
       throw new BadRequestError("No valid email found");
     }
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl");
     user.email = email;
     await user.save();
+    emitEvent("user", {
+      userList: user.friendList.map((f) => f._id),
+      action: "user",
+    });
+
     return user;
   }
 
@@ -348,7 +446,10 @@ class AccountService {
       throw new BadRequestError("No image found");
     }
     //get user
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl");
     //delete current image
     await deleteImageInAWSS3(await getImageNameFromUrl(user.profileImageUrl));
     //update new image
@@ -358,6 +459,11 @@ class AccountService {
     //update url
     user.profileImageUrl = imageUrl;
     await user.save();
+    emitEvent("user", {
+      userList: user.friendList.map((f) => f._id),
+      action: "user",
+    });
+
     return user;
   }
 
@@ -388,6 +494,7 @@ class AccountService {
       Feed.deleteMany({ userId: userId }),
       sendEmailToDeletedAccount(user.email),
     ]);
+    emitEvent("user", { userList: user.friendList, action: "user" });
 
     return null;
   }
