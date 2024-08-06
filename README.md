@@ -1,4 +1,3 @@
-
 # Locket clone API
 ![](https://ineqe.com/wp-content/uploads/2022/02/locket_app_icon-1024x1024.png)
 ## Description
@@ -6,11 +5,15 @@ Locket Clone API is an open-source project that replicates the server of the Loc
 
 The server provides the necessary APIs to manage users, authentication, uploading, and retrieving photos. It uses MongoDB as the main database to store user information and feed data and uses AWS S3 as an image storage. Security features such as password hashing and JWT authentication are also integrated to ensure data safety.
 
+[See Locket clone frontend here!](https://github.com/ghuysu/locket-clone-frontend)
+
+
 ## Getting Started
 ### Dependencies
 - **Node.js**: Version 14.x or higher is required.
 - **MongoDB**: A NoSQL database to store user and feed data.
 - **AWS S3**: Amazon Web Services S3 bucket for storing images.
+- **Socket.io**: To manage real-time connections between clients and servers.
 - **dotenv**: To manage environment variables.
 - **express**: For building the server and handling requests.
 - **mongoose**: To interact with MongoDB.
