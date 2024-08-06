@@ -30,7 +30,7 @@ class AccessService {
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     await user.save();
-    return user;
+    return await User.findById(user._id).lean();
   };
 
   static signout = async ({ userId }) => {
@@ -46,7 +46,12 @@ class AccessService {
     }
 
     // Check if the email is registered
-    const registeredUser = await User.findOne({ email: email }).lean();
+    const registeredUser = await User.findOne({ email: email })
+      .populate("friendList", "_id fullname profileImageUrl")
+      .populate("sentInviteList", "_id fullname profileImageUrl")
+      .populate("receivedInviteList", "_id fullname profileImageUrl")
+      .lean();
+
     if (!registeredUser) {
       throw new BadRequestError("Email is not registered");
     }

@@ -9,6 +9,8 @@ const {
   deleteImageInAWSS3,
 } = require("../utils/awsS3.util");
 const { isValidObjectId } = require("../utils/objectId.util");
+const { Types } = require("mongoose");
+const { emitEvent } = require("../utils/socketIO.util");
 
 class FeedService {
   static createFeed = async (
@@ -56,23 +58,28 @@ class FeedService {
     if (!errors.isEmpty()) {
       throw new BadRequestError("Data is required");
     }
+
     if (!isValidObjectId(feedId)) {
       throw new BadRequestError("Feed id is invalid");
     }
+
     if (visibility !== "everyone") {
       visibility = visibility.split(",").map((i) => {
         i = i.trim();
-        if (!isValidObjectId(i)) {
+        if (!isValidObjectId(i) && i !== "everyone") {
           throw new BadRequestError("Visibility is invalid");
         }
         return i;
       });
     }
+
+    // Kiểm tra sự tồn tại của feed
     const feed = await Feed.findOne({ _id: feedId, userId: userId }).lean();
     if (!feed) {
       throw new BadRequestError("No feed found");
     }
 
+    // Cập nhật feed
     const updatedFeed = await Feed.findOneAndUpdate(
       { _id: feedId, userId: userId },
       {
@@ -81,11 +88,21 @@ class FeedService {
           visibility: visibility,
         },
       },
-      { new: true, runValidators: visibility, lean: true }
-    );
+      { new: true, runValidators: true } // Chỉnh sửa runValidators và không dùng lean ở đây
+    )
+      .populate("userId", "fullname profileImageUrl")
+      .populate({
+        path: "reactions.userId", // Populate userId in reactions
+        select: "_id profileImageUrl fullname", // Các trường từ User bạn muốn populate trong reactions
+      })
+      .lean(); // Thực hiện populate và chuyển đổi về dạng đối tượng JavaScript đơn giản
+
     if (!updatedFeed) {
-      throw new BadRequestError("Something is wrong, try later");
+      throw new InternalServerError("Something went wrong, try later");
     }
+
+    emitEvent("feed", { action: "update", feed: updatedFeed });
+
     return updatedFeed;
   };
 
@@ -108,25 +125,21 @@ class FeedService {
 
   static getEveryoneFeed = async ({ userId }, { page }) => {
     const ITEMS_PER_PAGE = 20;
-    if (!Number.isInteger(page)) {
-      page = 1;
-    }
-    //get friend id list
+
     const user = await User.findById(userId).select("friendList").lean();
-    const friendIdList = user.friendList.map((i) => i.id.toString());
     const feeds = await Feed.find({
       $or: [
         {
-          //get friend feeds (feeds have userId field match friend id
-          //and visibility is everyone or match userId)
-          userId: { $in: friendIdList },
+          // get friend feeds (feeds have userId field match friend id
+          // and visibility is everyone or match userId)
+          userId: { $in: user.friendList },
           $or: [
             { visibility: "everyone" },
             { visibility: { $elemMatch: { $eq: userId } } },
           ],
         },
         {
-          //get user's feeds
+          // get user's feeds
           userId: userId,
         },
       ],
@@ -134,6 +147,11 @@ class FeedService {
       .sort({ createdAt: -1 })
       .skip(ITEMS_PER_PAGE * (page - 1))
       .limit(ITEMS_PER_PAGE)
+      .populate("userId", "fullname profileImageUrl") // Sử dụng populate để lấy thêm thông tin user
+      .populate({
+        path: "reactions.userId", // Populate userId in reactions
+        select: "_id profileImageUrl fullname", // Các trường từ User bạn muốn populate trong reactions
+      })
       .lean();
     return feeds;
   };
@@ -143,93 +161,129 @@ class FeedService {
     if (!isValidObjectId(searchId)) {
       throw new BadRequestError("Search id is invalid");
     }
-    if (!Number.isInteger(page)) {
-      page = 1;
-    }
     //check search id is current userId or not
     //if not, check whether they are friend or not
     if (userId !== searchId) {
       const user = await User.findById(userId).lean();
-      const isFriend = user.friendList.some(
-        (i) => i.id.toString() === searchId
-      );
+      const isFriend = user.friendList.some((i) => i.toString() === searchId);
       if (!isFriend) {
         throw new BadRequestError("They are not friends");
       }
+      const feeds = await Feed.find({
+        userId: searchId,
+        $or: [
+          { visibility: "everyone" },
+          { visibility: { $elemMatch: { $eq: userId } } },
+        ],
+      })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * ITEMS_PER_PAGE)
+        .limit(ITEMS_PER_PAGE)
+        .populate("userId", "fullname profileImageUrl") // Sử dụng populate để lấy thêm thông tin user
+        .populate({
+          path: "reactions.userId", // Populate userId in reactions
+          select: "_id profileImageUrl fullname", // Các trường từ User bạn muốn populate trong reactions
+        })
+        .lean();
+      return feeds;
     }
-    const feeds = await Feed.find({
-      $or: [
-        {
-          userId: searchId,
-          $or: [
-            { visibility: "everyone" },
-            { visibility: { $elemMatch: { $eq: userId } } },
-          ],
-        },
-        {
-          userId: userId,
-        },
-      ],
-    })
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * ITEMS_PER_PAGE)
-      .limit(ITEMS_PER_PAGE)
-      .lean();
-    return feeds;
+    if (userId === searchId) {
+      const feeds = await Feed.find({
+        userId: userId,
+      })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * ITEMS_PER_PAGE)
+        .limit(ITEMS_PER_PAGE)
+        .populate("userId", "fullname profileImageUrl") // Sử dụng populate để lấy thêm thông tin user
+        .populate({
+          path: "reactions.userId", // Populate userId in reactions
+          select: "_id profileImageUrl fullname", // Các trường từ User bạn muốn populate trong reactions
+        })
+        .lean();
+      return feeds;
+    }
   };
 
   static reactFeed = async (errors, { userId }, { feedId }, { icon }) => {
+    // Kiểm tra lỗi xác thực
     if (!errors.isEmpty()) {
       throw new BadRequestError("Icon is required");
     }
-    //check icon is valid or not
+
+    // Kiểm tra xem biểu tượng có hợp lệ không
     const reactIcons = ["like", "love", "haha", "wow", "sad", "angry"];
-    const isValidIcon = reactIcons.some((i) => i === icon);
-    if (!isValidIcon) {
+    if (!reactIcons.includes(icon)) {
       throw new BadRequestError("Icon is invalid");
     }
-    //check feedId is valid or not
+
+    // Kiểm tra ID của feed có hợp lệ không
     if (!isValidObjectId(feedId)) {
       throw new BadRequestError("Feed id is invalid");
     }
-    const feed = await Feed.findById(feedId);
+
+    // Tìm feed theo ID
+    let feed = await Feed.findById(feedId);
+
     if (!feed) {
       throw new BadRequestError("Feed is not existing");
     }
+
+    // Kiểm tra xem người dùng có đang phản ứng với feed của chính họ không
     if (feed.userId.toString() === userId) {
-      throw new BadRequestError("Can not react your own feed");
+      throw new BadRequestError("Cannot react to your own feed");
     }
-    const user = await User.findById(userId).lean();
-    //check whether reacted before
-    const isReacted = feed.reactions.some(
-      (i) => i.userId.toString() === userId
+
+    //Kiểm tra feed có hiện đối với user hiện tại k
+    if (!feed.visibility.includes(userId)) {
+      throw new BadRequestError("This feed did not shown for you anymore");
+    }
+
+    // Kiểm tra người dùng có phản ứng trước đó không
+    const existingReaction = feed.reactions.find(
+      (reaction) => reaction.userId.toString() === userId
     );
-    if (isReacted) {
-      const reactIndex = feed.reactions.findIndex(
-        (i) => i.userId.toString() === userId
-      );
-      const beforeIcon = feed.reactions[reactIndex].icon;
-      feed.reactionStatistic[beforeIcon] -= 1;
-      feed.reactionStatistic[icon] += 1;
-      feed.reactions[reactIndex] = {
+
+    if (existingReaction) {
+      // Kiểm tra icon hiện tại có giống lúc trước không, nếu giống thì xoá reaction đó
+      console.log({ icon, theIcon: existingReaction.icon });
+      if (icon === existingReaction.icon) {
+        feed.reactionStatistic[existingReaction.icon] -= 1;
+        feed.reactions = feed.reactions.filter((reaction) => {
+          reaction.userId !== userId;
+        });
+      } else {
+        // Nếu đã có phản ứng, cập nhật phản ứng
+        feed.reactionStatistic[existingReaction.icon] -= 1; // Giảm số lượng phản ứng cũ
+        feed.reactionStatistic[icon] += 1; // Tăng số lượng phản ứng mới
+        feed.reactions.map((reaction) => {
+          if (reaction.userId.toString() === userId.toString())
+            reaction.icon = icon;
+          return reaction;
+        });
+      }
+    } else {
+      // Nếu chưa có phản ứng, thêm mới
+      feed.reactions.push({
         userId: userId,
-        fullname: user.fullname,
-        profileImageUrl: user.profileImageUrl,
         icon: icon,
-      };
-      await feed.save();
-      return feed;
+      });
+      feed.reactionStatistic[icon] += 1; // Tăng số lượng phản ứng mới
     }
-    //push feed reaction
-    feed.reactions.push({
-      userId: userId,
-      fullname: user.fullname,
-      profileImageUrl: user.profileImageUrl,
-      icon: icon,
-    });
-    feed.reactionStatistic[icon] += 1;
+
+    // Lưu thay đổi vào cơ sở dữ liệu
     await feed.save();
-    return feed;
+
+    // Trả về feed đã cập nhật
+    return await Feed.findById(feedId)
+      .populate({
+        path: "userId", // Populate thông tin người dùng
+        select: "_id profileImageUrl fullname",
+      })
+      .populate({
+        path: "reactions.userId", // Populate thông tin người dùng trong reactions
+        select: "_id profileImageUrl fullname",
+      })
+      .lean(); // Chuyển đổi kết quả thành đối tượng JavaScript đơn giản
   };
 }
 

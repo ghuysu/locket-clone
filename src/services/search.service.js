@@ -33,7 +33,11 @@ class SearchService {
     }
     let user;
     if (userId === searchId) {
-      user = await User.findById(searchId).lean();
+      user = await User.findById(searchId)
+        .populate("friendList", "_id fullname profileImageUrl")
+        .populate("sentInviteList", "_id fullname profileImageUrl")
+        .populate("receivedInviteList", "_id fullname profileImageUrl")
+        .lean();
     } else {
       user = await User.findById(searchId)
         .select("_id fullname email birthday profileImageUrl")

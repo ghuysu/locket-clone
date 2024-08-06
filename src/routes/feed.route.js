@@ -1,39 +1,37 @@
-"use strict"
+"use strict";
 
-const FeedController = require("../controllers/feed.controller")
-const router = require("express").Router()
-const asyncHandler = require("../helpers/asyncHandler.helper")
-const {authenticateToken}= require("../auth/loginKey.auth")
-const {uploadImage} = require("../configs/multer.config")
-const {body} = require("express-validator")
+const FeedController = require("../controllers/feed.controller");
+const router = require("express").Router();
+const asyncHandler = require("../helpers/asyncHandler.helper");
+const { authenticateToken } = require("../auth/loginKey.auth");
+const { uploadImage } = require("../configs/multer.config");
+const { body } = require("express-validator");
 
-router.use(asyncHandler(authenticateToken))
+router.use(asyncHandler(authenticateToken));
 
-router.post("/create", uploadImage.single('image'), [
-    body("description")
-    .not().isEmpty().withMessage("Description is required"),
+router.post(
+  "/create",
+  uploadImage.single("image"),
+  [body("visibility").not().isEmpty().withMessage("Visibility is required")],
+  asyncHandler(FeedController.createFeed)
+);
 
-    body("visibility")
-    .not().isEmpty().withMessage("Visibility is required")
-    ], asyncHandler(FeedController.createFeed))
+router.patch(
+  "/:feedId",
+  [body("visibility").not().isEmpty().withMessage("Visibility is required")],
+  asyncHandler(FeedController.updateFeed)
+);
 
-router.patch("/update/:feedId", [
-    body("description")
-    .not().isEmpty().withMessage("Description is required"),
+router.delete("/:feedId", asyncHandler(FeedController.deleteFeed));
 
-    body("visibility")
-    .not().isEmpty().withMessage("Visibility is required")
-    ], asyncHandler(FeedController.updateFeed))
+router.get("/everyone", asyncHandler(FeedController.getEveryoneFeed));
 
-router.delete("/delete/:feedId", asyncHandler(FeedController.deleteFeed))
+router.get("/certain/:searchId", asyncHandler(FeedController.getCertainFeed));
 
-router.get("/everyone", asyncHandler(FeedController.getEveryoneFeed))
+router.post(
+  "/:feedId",
+  [body("icon").not().isEmpty().withMessage("Icon is required")],
+  asyncHandler(FeedController.reactFeed)
+);
 
-router.get("/certain/:searchId", asyncHandler(FeedController.getCertainFeed))
-
-router.post("/:feedId", [
-    body("icon")
-    .not().isEmpty().withMessage("Icon is required")
-    ], asyncHandler(FeedController.reactFeed))
-
-module.exports = router
+module.exports = router;
