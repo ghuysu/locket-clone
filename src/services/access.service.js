@@ -35,7 +35,6 @@ class AccessService {
 
     user.password = hashedPassword;
     await user.save();
-
     return await User.findById(user._id).lean();
   };
 

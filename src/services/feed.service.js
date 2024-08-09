@@ -138,7 +138,7 @@ class FeedService {
     const ITEMS_PER_PAGE = 20;
 
     const user = await User.findById(userId).select("friendList").lean();
-
+    
     const feeds = await Feed.find({
       $or: [
         {
@@ -175,7 +175,6 @@ class FeedService {
     if (!isValidObjectId(searchId)) {
       throw new BadRequestError("Search id is invalid");
     }
-
     //check search id is current userId or not
     //if not, check whether they are friend or not
     if (userId !== searchId) {
@@ -202,7 +201,7 @@ class FeedService {
         .lean();
       return feeds;
     }
-
+    
     if (userId === searchId) {
       const feeds = await Feed.find({
         userId: userId,
@@ -287,7 +286,10 @@ class FeedService {
         userId: userId,
         icon: icon,
       });
+<<<<<<< HEAD
 
+=======
+>>>>>>> c73592cc4e70d17ceb6bd8d393ddfa5917581600
       feed.reactionStatistic[icon] += 1; // Tăng số lượng phản ứng mới
     }
 

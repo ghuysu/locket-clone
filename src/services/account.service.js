@@ -23,6 +23,8 @@ const {
   sendEmailToDeletedAccount,
   sendCodeForChangeEmail,
 } = require("../utils/email.util");
+const { Types } = require("mongoose");
+const { emitEvent } = require("../utils/socketIO.util");
 
 class AccountService {
   static async removeInviteFromReceiver(errors, { userId }, { friendId }) {
@@ -383,21 +385,17 @@ class AccountService {
     if (!errors.isEmpty()) {
       throw new BadRequestError("Birthday is required");
     }
-
     const user = await User.findById(userId)
       .populate("friendList", "_id fullname profileImageUrl")
       .populate("sentInviteList", "_id fullname profileImageUrl")
       .populate("receivedInviteList", "_id fullname profileImageUrl");
-
     user.birthday = birthday;
 
     await user.save();
-
     emitEvent("user", {
       userList: user.friendList.map((f) => f._id),
       action: "user",
     });
-
     return user;
   }
 
@@ -445,16 +443,13 @@ class AccountService {
     if (!errors.isEmpty()) {
       throw new BadRequestError("No valid email found");
     }
-
     const user = await User.findById(userId)
       .populate("friendList", "_id fullname profileImageUrl")
       .populate("sentInviteList", "_id fullname profileImageUrl")
       .populate("receivedInviteList", "_id fullname profileImageUrl");
-
     user.email = email;
 
     await user.save();
-
     emitEvent("user", {
       userList: user.friendList.map((f) => f._id),
       action: "user",
@@ -474,7 +469,6 @@ class AccountService {
       .populate("friendList", "_id fullname profileImageUrl")
       .populate("sentInviteList", "_id fullname profileImageUrl")
       .populate("receivedInviteList", "_id fullname profileImageUrl");
-
     //delete current image
     await deleteImageInAWSS3(await getImageNameFromUrl(user.profileImageUrl));
 
@@ -488,7 +482,6 @@ class AccountService {
     user.profileImageUrl = imageUrl;
 
     await user.save();
-
     emitEvent("user", {
       userList: user.friendList.map((f) => f._id),
       action: "user",
@@ -525,6 +518,7 @@ class AccountService {
       Feed.deleteMany({ userId: userId }),
       sendEmailToDeletedAccount(user.email),
     ]);
+    emitEvent("user", { userList: user.friendList, action: "user" });
 
     emitEvent("user", { userList: user.friendList, action: "user" });
 
