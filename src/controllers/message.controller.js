@@ -12,6 +12,7 @@ class MessageController {
       ),
     }).send(res);
   };
+
   static getMessages = async (req, res, next) => {
     new OK({
       message: "Get messages successfully",
@@ -20,6 +21,20 @@ class MessageController {
         req.params,
         req.query
       ),
+    }).send(res);
+  };
+
+  static getAllFriendMessages = async (req, res, next) => {
+    new OK({
+      message: "Get all friend messages successfully",
+      metadata: await MessageService.getAllFriendMessages(req.user),
+    }).send(res);
+  };
+
+  static readMessage = async (req, res, next) => {
+    new OK({
+      message: "Read messages successfully",
+      metadata: await MessageService.readMessage(req.user, req.body),
     }).send(res);
   };
 }

@@ -155,6 +155,7 @@ class AccessService {
 
     //send code to email to confirm user fill a existing email
     const code = await sendCodeToCheckExistingEmail(email);
+    console.log(code);
 
     return {
       code: code,
@@ -175,7 +176,7 @@ class AccessService {
 
     //send code to email to confirm user fill a existing email
     const code = await sendCodeToCheckOwner(email);
-
+    console.log(code);
     return {
       code: code,
     };

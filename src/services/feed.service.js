@@ -131,14 +131,16 @@ class FeedService {
     //delete image in s3
     await deleteImageInAWSS3(await getImageNameFromUrl(feed.imageUrl));
 
+    emitEvent("feed", { action: "delete", feedId: feedId });
+
     return null;
   };
 
-  static getEveryoneFeed = async ({ userId }, { page }) => {
+  static getEveryoneFeed = async ({ userId }, { skip }) => {
     const ITEMS_PER_PAGE = 20;
 
     const user = await User.findById(userId).select("friendList").lean();
-    
+
     const feeds = await Feed.find({
       $or: [
         {
@@ -157,7 +159,7 @@ class FeedService {
       ],
     })
       .sort({ createdAt: -1 })
-      .skip(ITEMS_PER_PAGE * (page - 1))
+      .skip(skip)
       .limit(ITEMS_PER_PAGE)
       .populate("userId", "fullname profileImageUrl") // Sử dụng populate để lấy thêm thông tin user
       .populate({
@@ -169,7 +171,7 @@ class FeedService {
     return feeds;
   };
 
-  static getCertainFeed = async ({ userId }, { searchId }, { page }) => {
+  static getCertainFeed = async ({ userId }, { searchId }, { skip }) => {
     const ITEMS_PER_PAGE = 20;
 
     if (!isValidObjectId(searchId)) {
@@ -191,7 +193,7 @@ class FeedService {
         ],
       })
         .sort({ createdAt: -1 })
-        .skip((page - 1) * ITEMS_PER_PAGE)
+        .skip(skip)
         .limit(ITEMS_PER_PAGE)
         .populate("userId", "fullname profileImageUrl") // Sử dụng populate để lấy thêm thông tin user
         .populate({
@@ -201,7 +203,7 @@ class FeedService {
         .lean();
       return feeds;
     }
-    
+
     if (userId === searchId) {
       const feeds = await Feed.find({
         userId: userId,
@@ -286,10 +288,6 @@ class FeedService {
         userId: userId,
         icon: icon,
       });
-<<<<<<< HEAD
-
-=======
->>>>>>> c73592cc4e70d17ceb6bd8d393ddfa5917581600
       feed.reactionStatistic[icon] += 1; // Tăng số lượng phản ứng mới
     }
 

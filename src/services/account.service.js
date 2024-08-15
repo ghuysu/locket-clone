@@ -23,8 +23,6 @@ const {
   sendEmailToDeletedAccount,
   sendCodeForChangeEmail,
 } = require("../utils/email.util");
-const { Types } = require("mongoose");
-const { emitEvent } = require("../utils/socketIO.util");
 
 class AccountService {
   static async removeInviteFromReceiver(errors, { userId }, { friendId }) {
@@ -336,7 +334,10 @@ class AccountService {
       .lean() // Chuyển đổi kết quả thành đối tượng thuần túy
       .exec();
 
-    emitEvent("user", { userId: friendId, action: "friend" });
+    emitEvent("user", {
+      userList: [userId, friendId],
+      action: "accept friend",
+    });
 
     return populatedUser;
   }
