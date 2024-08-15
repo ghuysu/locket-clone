@@ -9,12 +9,14 @@ class SearchService {
     if (!searchValue) {
       throw new BadRequestError("Search value is required");
     }
+
     //ex: "To Uyen Dang" -> /To|Uyen|Dang/i
     // /.../ : regular expression
     // | : or
     // i : flag case insensitive (don't wonder uppercase or lowercase)
-    console.log(searchValue);
+
     const searchRegex = new RegExp(searchValue.replace(/\s+/g, "|"), "i");
+
     const users = await User.find({
       _id: { $ne: userId },
       $or: [
@@ -31,7 +33,9 @@ class SearchService {
     if (!isValidObjectId(searchId)) {
       throw new BadRequestError("Search id is invalid");
     }
+
     let user;
+
     if (userId === searchId) {
       user = await User.findById(searchId)
         .populate("friendList", "_id fullname profileImageUrl")
@@ -43,9 +47,11 @@ class SearchService {
         .select("_id fullname email birthday profileImageUrl")
         .lean();
     }
+
     if (!user) {
       throw new BadRequestError("No user found");
     }
+
     return user;
   };
 }

@@ -2,6 +2,7 @@ const socketIo = require("../configs/socketIo.config");
 
 function emitEvent(eventName, data) {
   const io = socketIo.getIO();
+
   if (io) {
     io.emit(eventName, data);
   } else {

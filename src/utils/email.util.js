@@ -11,6 +11,7 @@ const transporter = nodeMailer.createTransport({
 
 const sendCodeToCheckExistingEmail = async (targetEmail) => {
   const code = Math.floor(100000 + Math.random() * 900000);
+
   await transporter.sendMail({
     from: process.env.EMAIL_NAME,
     to: targetEmail,
@@ -25,11 +26,13 @@ const sendCodeToCheckExistingEmail = async (targetEmail) => {
             <p style="font-size: 14px; color: #777;">If you did not request this registration, please ignore this email.</p>
         </div>`,
   });
+
   return code;
 };
 
 const sendCodeForChangeEmail = async (targetEmail) => {
   const code = Math.floor(100000 + Math.random() * 900000);
+
   await transporter.sendMail({
     from: process.env.EMAIL_NAME,
     to: targetEmail,
@@ -44,6 +47,7 @@ const sendCodeForChangeEmail = async (targetEmail) => {
             <p style="font-size: 14px; color: #777;">If you did not request this changing, please ignore this email.</p>
         </div>`,
   });
+
   return code;
 };
 
@@ -66,6 +70,7 @@ const sendEmailToDeletedAccount = async (targetEmail) => {
 
 const sendCodeToCheckOwner = async (targetEmail) => {
   const code = Math.floor(100000 + Math.random() * 900000);
+
   await transporter.sendMail({
     from: process.env.EMAIL_NAME,
     to: targetEmail,
@@ -80,6 +85,7 @@ const sendCodeToCheckOwner = async (targetEmail) => {
           <p style="font-size: 14px; color: #777;">If you did not request this password changing, please ignore this email.</p>
       </div>`,
   });
+
   return code;
 };
 

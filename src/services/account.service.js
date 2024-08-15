@@ -1,13 +1,15 @@
 "use strict";
 
-const {
-  BadRequestError,
-  InternalServerError,
-} = require("../core/error.response");
 const bcrypt = require("bcryptjs");
 const User = require("../models/user.model");
 const SignInKey = require("../models/signInKey");
 const Feed = require("../models/feed.model");
+const { Types } = require("mongoose");
+const { emitEvent } = require("../utils/socketIO.util");
+const {
+  BadRequestError,
+  InternalServerError,
+} = require("../core/error.response");
 const {
   getImageNameFromUrl,
   createImageFromFullname,
@@ -21,8 +23,6 @@ const {
   sendEmailToDeletedAccount,
   sendCodeForChangeEmail,
 } = require("../utils/email.util");
-const { Types } = require("mongoose");
-const { emitEvent } = require("../utils/socketIO.util");
 
 class AccountService {
   static async removeInviteFromReceiver(errors, { userId }, { friendId }) {
@@ -334,7 +334,10 @@ class AccountService {
       .lean() // Chuyển đổi kết quả thành đối tượng thuần túy
       .exec();
 
-    emitEvent("user", { userId: friendId, action: "friend" });
+    emitEvent("user", {
+      userList: [userId, friendId],
+      action: "accept friend",
+    });
 
     return populatedUser;
   }
@@ -344,6 +347,7 @@ class AccountService {
       console.log(errors.array());
       throw new BadRequestError("Firstname and lastname are required");
     }
+
     //update name
     const user = await User.findById(userId)
       .populate("friendList", "_id fullname profileImageUrl")
@@ -352,8 +356,10 @@ class AccountService {
 
     user.fullname.firstname = firstname;
     user.fullname.lastname = lastname;
+
     //delete current avatar
     const imageName = await getImageNameFromUrl(user.profileImageUrl);
+
     if (imageName.substring(0, 8) === "default_") {
       deleteImageInAWSS3(imageName);
       //create image from name
@@ -365,11 +371,14 @@ class AccountService {
       //update avatar url
       user.profileImageUrl = imageUrl;
     }
+
     await user.save();
+
     emitEvent("user", {
       userList: user.friendList.map((f) => f._id),
       action: "user",
     });
+
     return user;
   }
 
@@ -382,6 +391,7 @@ class AccountService {
       .populate("sentInviteList", "_id fullname profileImageUrl")
       .populate("receivedInviteList", "_id fullname profileImageUrl");
     user.birthday = birthday;
+
     await user.save();
     emitEvent("user", {
       userList: user.friendList.map((f) => f._id),
@@ -398,25 +408,33 @@ class AccountService {
     if (!errors.isEmpty()) {
       throw new BadRequestError("Infor is required");
     }
+
     const registeredUser = await User.findOne({
       email: oldEmail,
       _id: userId,
     }).lean();
+
     if (!registeredUser) {
       throw new BadRequestError("Old email is not registered");
     }
+
     // Check if the password is correct
     const match = await bcrypt.compare(password, registeredUser.password);
+
     if (!match) {
       throw new BadRequestError("Password is incorrect");
     }
+
     // Check new email is valid
     const user = await User.findOne({ email: newEmail }).lean();
+
     if (user) {
       throw new BadRequestError("Email is registered");
     }
+
     //send code to email to confirm user fill a existing email
     const code = await sendCodeForChangeEmail(newEmail);
+
     return {
       code: code,
     };
@@ -431,6 +449,7 @@ class AccountService {
       .populate("sentInviteList", "_id fullname profileImageUrl")
       .populate("receivedInviteList", "_id fullname profileImageUrl");
     user.email = email;
+
     await user.save();
     emitEvent("user", {
       userList: user.friendList.map((f) => f._id),
@@ -445,6 +464,7 @@ class AccountService {
     if (!image) {
       throw new BadRequestError("No image found");
     }
+
     //get user
     const user = await User.findById(userId)
       .populate("friendList", "_id fullname profileImageUrl")
@@ -452,12 +472,16 @@ class AccountService {
       .populate("receivedInviteList", "_id fullname profileImageUrl");
     //delete current image
     await deleteImageInAWSS3(await getImageNameFromUrl(user.profileImageUrl));
+
     //update new image
     const imageUrl = await uploadImageToAWSS3(image.path, null);
+
     //delete image saved by multer
     deleteFile(image.path);
+
     //update url
     user.profileImageUrl = imageUrl;
+
     await user.save();
     emitEvent("user", {
       userList: user.friendList.map((f) => f._id),
@@ -470,6 +494,7 @@ class AccountService {
   static async deleteAccount({ userId }) {
     // Find and delete the user
     const user = await User.findByIdAndDelete(userId).lean();
+
     if (!user) {
       throw new BadRequestError("No user found");
     }
@@ -494,6 +519,8 @@ class AccountService {
       Feed.deleteMany({ userId: userId }),
       sendEmailToDeletedAccount(user.email),
     ]);
+    emitEvent("user", { userList: user.friendList, action: "user" });
+
     emitEvent("user", { userList: user.friendList, action: "user" });
 
     return null;
