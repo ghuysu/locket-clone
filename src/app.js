@@ -33,11 +33,7 @@ app.use(
 );
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://skn7vgp9-5173.asse.devtunnels.ms",
-    ],
-    methods: ["GET", "POST", "PATCH", "DELETE"],
+    origin: "*",
   })
 );
 

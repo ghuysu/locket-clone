@@ -24,11 +24,11 @@ io.on("connection", (socket) => {
   console.log(`Client connected:: ${socket.id}`);
 });
 
-// Ctrl + C: close server
-process.on("SIGINT", () => {
-  console.log("::SIGINT received, closing server...");
-  server.close(() => {
-    console.log("::Server Closed");
-    process.exit(0);
-  });
-});
+// // Ctrl + C: close server
+// process.on("SIGINT", () => {
+//   console.log("::SIGINT received, closing server...");
+//   server.close(() => {
+//     console.log("::Server Closed");
+//     process.exit(0);
+//   });
+// });
